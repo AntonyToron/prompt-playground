@@ -1,7 +1,5 @@
-// components/ConfigDialog.tsx
 "use client";
 
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,73 +25,75 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { SettingsIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { ChatType } from "@/types/chat";
 
-import { useChatContext, models } from "./ChatContext";
+import { useChatContext } from "./ChatContext";
+import { MODELS } from "@/constants/models";
 
 export function ConfigDialog() {
   const {
-    apiKey,
-    setApiKey,
     currentChat,
-    updateModel,
-    modelConfig,
-    setModelConfig,
+    updateCurrentChat,
     streaming,
     setStreaming,
-    updateSystemPrompt,
     configDialogOpen: open,
     setConfigDialogOpen: setOpen,
   } = useChatContext();
 
-  // Handle model selection
+  const { modelConfig, apiKey } = currentChat;
+  const setApiKey = (key: string) => {
+    updateCurrentChat({ apiKey: key });
+  };
+
   const handleModelChange = (modelId: string) => {
-    const model = models.find((m) => m.id === modelId);
+    const model = MODELS.find((m) => m.id === modelId);
     if (model && currentChat) {
-      updateModel(model);
+      updateCurrentChat({ model });
     }
   };
 
-  // Add a header to the model config
   const addHeader = () => {
-    setModelConfig((prevConfig) => ({
-      ...prevConfig,
-      headers: [...prevConfig.headers, { key: "", value: "" }],
-    }));
+    const prevConfig = currentChat.modelConfig;
+    updateCurrentChat({
+      modelConfig: {
+        ...prevConfig,
+        headers: [...prevConfig.headers, { key: "", value: "" }],
+      },
+    });
   };
 
-  // Update a header in the model config
+  const updateModelConfig = (updates: Partial<ChatType["modelConfig"]>) => {
+    updateCurrentChat({
+      modelConfig: {
+        ...currentChat.modelConfig,
+        ...updates,
+      },
+    });
+  };
+
   const updateHeader = (
     index: number,
     field: "key" | "value",
     value: string
   ) => {
-    setModelConfig((prevConfig) => {
-      const updatedHeaders = [...prevConfig.headers];
-      updatedHeaders[index][field] = value;
-      return {
-        ...prevConfig,
-        headers: updatedHeaders,
-      };
-    });
+    const prevConfig = currentChat.modelConfig;
+    const updatedHeaders = [...prevConfig.headers];
+    updatedHeaders[index][field] = value;
+    updateModelConfig({ headers: updatedHeaders });
   };
 
-  // Remove a header from the model config
   const removeHeader = (index: number) => {
-    setModelConfig((prevConfig) => {
-      const updatedHeaders = [...prevConfig.headers];
-      updatedHeaders.splice(index, 1);
-      return {
-        ...prevConfig,
-        headers: updatedHeaders,
-      };
-    });
+    const prevConfig = currentChat.modelConfig;
+    const updatedHeaders = [...prevConfig.headers];
+    updatedHeaders.splice(index, 1);
+    updateModelConfig({ headers: updatedHeaders });
   };
 
   // Handle system prompt change in card
   const handleSystemPromptChange = (
     e: React.ChangeEvent<HTMLTextAreaElement>
   ) => {
-    updateSystemPrompt(e.target.value);
+    updateCurrentChat({ systemPrompt: e.target.value });
   };
 
   return (
@@ -135,23 +135,23 @@ export function ConfigDialog() {
                   <SelectItem value="header-openai" disabled>
                     --- OpenAI Models ---
                   </SelectItem>
-                  {models
-                    .filter((model) => model.provider === "openai")
-                    .map((model) => (
+                  {MODELS.filter((model) => model.provider === "openai").map(
+                    (model) => (
                       <SelectItem key={model.id} value={model.id}>
                         {model.name}
                       </SelectItem>
-                    ))}
+                    )
+                  )}
                   <SelectItem value="header-anthropic" disabled>
                     --- Anthropic Models ---
                   </SelectItem>
-                  {models
-                    .filter((model) => model.provider === "anthropic")
-                    .map((model) => (
+                  {MODELS.filter((model) => model.provider === "anthropic").map(
+                    (model) => (
                       <SelectItem key={model.id} value={model.id}>
                         {model.name}
                       </SelectItem>
-                    ))}
+                    )
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -206,7 +206,7 @@ export function ConfigDialog() {
                   step={0.01}
                   value={[modelConfig.temperature]}
                   onValueChange={([value]) =>
-                    setModelConfig({ ...modelConfig, temperature: value })
+                    updateModelConfig({ temperature: value })
                   }
                 />
                 <p className="text-xs text-gray-500">
@@ -226,7 +226,7 @@ export function ConfigDialog() {
                   step={0.01}
                   value={[modelConfig.topP]}
                   onValueChange={([value]) =>
-                    setModelConfig({ ...modelConfig, topP: value })
+                    updateModelConfig({ topP: value })
                   }
                 />
                 <p className="text-xs text-gray-500">
@@ -245,7 +245,7 @@ export function ConfigDialog() {
                   step={1}
                   value={[modelConfig.topK]}
                   onValueChange={([value]) =>
-                    setModelConfig({ ...modelConfig, topK: value })
+                    updateModelConfig({ topK: value })
                   }
                   disabled={currentChat?.model.provider === "openai"}
                 />
@@ -269,7 +269,7 @@ export function ConfigDialog() {
                   step={10}
                   value={[modelConfig.maxTokens]}
                   onValueChange={([value]) =>
-                    setModelConfig({ ...modelConfig, maxTokens: value })
+                    updateModelConfig({ maxTokens: value })
                   }
                 />
                 <p className="text-xs text-gray-500">

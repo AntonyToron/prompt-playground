@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, ReactNode } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useChatContext, MessageType } from "./ChatContext";
+import { useChatContext } from "./ChatContext";
 import { ConfigDialog } from "./ConfigDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Sparkles, Bot, MessageSquare } from "lucide-react";
@@ -14,6 +14,7 @@ import { ChatInput } from "./ChatInput";
 import { MessageContent } from "./MessageContent";
 import { BorderBeam } from "./magicui/border-beam";
 import { TextAnimate } from "./magicui/text-animate";
+import { MessageType } from "@/types/chat";
 
 const MessageWrapper = ({
   role,

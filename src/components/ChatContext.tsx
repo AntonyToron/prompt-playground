@@ -6,71 +6,20 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  SetStateAction,
 } from "react";
-
-// Type definitions
-export type MessageType = {
-  role: "user" | "assistant" | "system";
-  content: string;
-};
-
-export type ModelType = {
-  id: string;
-  name: string;
-  provider: "openai" | "anthropic";
-};
-
-export type ModelConfigType = {
-  temperature: number;
-  topP: number;
-  topK: number;
-  maxTokens: number;
-  headers: { key: string; value: string }[];
-};
-
-export type ChatType = {
-  id: string;
-  title: string;
-  messages: MessageType[];
-  systemPrompt: string;
-  model: ModelType;
-};
-
-// Model options
-export const models: ModelType[] = [
-  { id: "gpt-4o", name: "GPT-4o", provider: "openai" },
-  { id: "gpt-4-turbo", name: "GPT-4 Turbo", provider: "openai" },
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: "openai" },
-  {
-    id: "claude-3-7-sonnet-20250219",
-    name: "Claude 3.7 Sonnet",
-    provider: "anthropic",
-  },
-  {
-    id: "claude-3-5-sonnet-20241022",
-    name: "Claude 3.5 Sonnet",
-    provider: "anthropic",
-  },
-  {
-    id: "claude-3-opus-20240229",
-    name: "Claude 3 Opus",
-    provider: "anthropic",
-  },
-  {
-    id: "claude-3-sonnet-20240229",
-    name: "Claude 3 Sonnet",
-    provider: "anthropic",
-  },
-  {
-    id: "claude-3-haiku-20240307",
-    name: "Claude 3 Haiku",
-    provider: "anthropic",
-  },
-];
+import {
+  ModelType,
+  ChatType,
+  MessageType,
+  ModelConfigType,
+} from "@/types/chat";
+import { MODELS } from "@/constants/models";
+import { v4 as uuid } from "uuid";
+import { setLocalStorage, getLocalStorage } from "@/utils/localStorage";
 
 // Default configuration
-const defaultModelConfig: ModelConfigType = {
+const DEFAULT_MODEL_CONFIG: ModelConfigType = {
   temperature: 0.7,
   topP: 1,
   topK: 40,
@@ -78,35 +27,27 @@ const defaultModelConfig: ModelConfigType = {
   headers: [],
 };
 
-// Local storage keys
-const STORAGE_KEYS = {
-  API_KEY: "aiPlayground_apiKey",
-  CONFIG: "aiPlayground_config",
-  CHAT_IDS: "aiPlayground_chatIds",
-  CURRENT_CHAT_ID: "aiPlayground_currentChatId",
-  STREAMING: "aiPlayground_streaming",
-  CHAT_PREFIX: "aiPlayground_chat_",
-};
+const STORAGE_KEY = "playground_chats";
 
 // Create context with default value
 type ChatContextType = {
   chats: ChatType[];
+
   currentChatId: string | null;
   setCurrentChatId: (id: string) => void;
+  updateCurrentChat: (updates: Partial<ChatType>) => void;
+  addMessageToCurrentChat: (message: MessageType) => void;
+
+  updateChatTitle: (id: string, title: string) => void;
+
   createNewChat: () => void;
   deleteChat: (id: string) => void;
-  updateChatTitle: (id: string, title: string) => void;
-  addMessageToCurrentChat: (message: MessageType) => void;
   clearCurrentChat: () => void;
-  currentChat: ChatType | null;
-  apiKey: string;
-  setApiKey: (key: string) => void;
-  modelConfig: ModelConfigType;
-  setModelConfig: React.Dispatch<React.SetStateAction<ModelConfigType>>;
-  updateSystemPrompt: (prompt: string) => void;
-  updateModel: (model: ModelType) => void;
+  currentChat: ChatType;
+
   streaming: boolean;
   setStreaming: (streaming: boolean) => void;
+
   abortController: AbortController | null;
   setAbortController: (controller: AbortController | null) => void;
 
@@ -120,142 +61,63 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [chats, setChats] = useState<ChatType[]>([]);
+  const [chats, _setChats] = useState<ChatType[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string>("");
-  const [modelConfig, setModelConfig] =
-    useState<ModelConfigType>(defaultModelConfig);
   const [streaming, setStreaming] = useState<boolean>(true);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
-  // Generate a unique ID
-  const generateId = (): string => {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  };
-
-  // Helper to create a default chat
   const createDefaultChat = (): ChatType => {
     return {
-      id: generateId(),
+      id: uuid(),
       title: "New Chat",
       messages: [],
       systemPrompt: "",
-      model: models[0],
+      model: MODELS[0],
+      apiKey: "",
+      modelConfig: { ...DEFAULT_MODEL_CONFIG },
     };
   };
 
-  // Save a single chat to localStorage
-  const saveChatToStorage = (chat: ChatType) => {
-    localStorage.setItem(
-      `${STORAGE_KEYS.CHAT_PREFIX}${chat.id}`,
-      JSON.stringify(chat)
-    );
-  };
-
-  // Get a single chat from localStorage
-  const getChatFromStorage = (chatId: string): ChatType | null => {
-    const chatJson = localStorage.getItem(
-      `${STORAGE_KEYS.CHAT_PREFIX}${chatId}`
-    );
-    if (chatJson) {
-      try {
-        return JSON.parse(chatJson);
-      } catch (e) {
-        console.error(`Error parsing chat ${chatId}:`, e);
-        return null;
-      }
+  const setChats = (update: SetStateAction<ChatType[]>) => {
+    if (typeof update === "function") {
+      _setChats((prev) => {
+        const newChats = update(prev);
+        setLocalStorage(STORAGE_KEY, JSON.stringify(newChats));
+        return newChats;
+      });
+    } else {
+      _setChats(update);
+      setLocalStorage(STORAGE_KEY, JSON.stringify(update));
     }
-    return null;
-  };
-
-  // Save chat IDs list to localStorage
-  const saveChatIdsToStorage = (chatIds: string[]) => {
-    localStorage.setItem(STORAGE_KEYS.CHAT_IDS, JSON.stringify(chatIds));
   };
 
   // Load saved data from localStorage
   useEffect(() => {
-    // Load general settings
-    const savedApiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
-    const savedConfig = localStorage.getItem(STORAGE_KEYS.CONFIG);
-    const savedChatIds = localStorage.getItem(STORAGE_KEYS.CHAT_IDS);
-    const savedCurrentChatId = localStorage.getItem(
-      STORAGE_KEYS.CURRENT_CHAT_ID
-    );
-    const savedStreaming = localStorage.getItem(STORAGE_KEYS.STREAMING);
+    const savedChatsValue = getLocalStorage(STORAGE_KEY);
+    let savedChats: ChatType[] | undefined;
+    let initialCurrentChatId: string | undefined;
 
-    if (savedApiKey) setApiKey(savedApiKey);
-
-    if (savedConfig) {
+    if (savedChatsValue) {
       try {
-        setModelConfig(JSON.parse(savedConfig));
-      } catch (e) {
-        console.error("Error parsing saved config:", e);
-      }
-    }
-
-    // Load chat IDs and then load each chat
-    let chatsList: ChatType[] = [];
-    let initialCurrentChatId = null;
-
-    if (savedChatIds) {
-      try {
-        const chatIds: string[] = JSON.parse(savedChatIds);
-        chatsList = chatIds
-          .map((id) => getChatFromStorage(id))
-          .filter((chat): chat is ChatType => chat !== null);
+        savedChats = JSON.parse(savedChatsValue);
       } catch (e) {
         console.error("Error parsing saved chat IDs:", e);
       }
     }
 
     // Create a default chat if no chats loaded
-    if (chatsList.length === 0) {
+    if (!savedChats || savedChats.length === 0) {
       const defaultChat = createDefaultChat();
-      chatsList = [defaultChat];
-      initialCurrentChatId = defaultChat.id;
-      saveChatToStorage(defaultChat);
-      saveChatIdsToStorage([defaultChat.id]);
-    } else if (savedCurrentChatId) {
-      initialCurrentChatId = savedCurrentChatId;
-    } else {
-      initialCurrentChatId = chatsList[0].id;
+      savedChats = [defaultChat];
     }
 
-    setChats(chatsList);
+    initialCurrentChatId = savedChats[0].id;
+
+    setChats(savedChats);
     setCurrentChatId(initialCurrentChatId);
-
-    if (savedStreaming) {
-      try {
-        setStreaming(JSON.parse(savedStreaming));
-      } catch (e) {
-        console.error("Error parsing streaming setting:", e);
-      }
-    }
   }, []);
-
-  // Save settings to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.API_KEY, apiKey);
-    localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(modelConfig));
-    localStorage.setItem(STORAGE_KEYS.STREAMING, JSON.stringify(streaming));
-
-    // Save chat IDs list
-    const chatIds = chats.map((chat) => chat.id);
-    saveChatIdsToStorage(chatIds);
-
-    if (currentChatId) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_CHAT_ID, currentChatId);
-    }
-  }, [
-    apiKey,
-    modelConfig,
-    streaming,
-    chats.map((c) => c.id).join(","),
-    currentChatId,
-  ]);
 
   // Get current chat
   const currentChat = currentChatId
@@ -267,15 +129,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     const newChat = createDefaultChat();
     setChats((prevChats) => [...prevChats, newChat]);
     setCurrentChatId(newChat.id);
-    saveChatToStorage(newChat);
   };
 
   // Delete a chat
   const deleteChat = (id: string) => {
     setChats((prevChats) => prevChats.filter((chat) => chat.id !== id));
-
-    // Remove from localStorage
-    localStorage.removeItem(`${STORAGE_KEYS.CHAT_PREFIX}${id}`);
 
     // If the deleted chat was the current one, select another chat
     if (currentChatId === id) {
@@ -295,7 +153,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       prevChats.map((chat) => {
         if (chat.id === id) {
           const updatedChat = { ...chat, title };
-          saveChatToStorage(updatedChat);
           return updatedChat;
         }
         return chat;
@@ -314,7 +171,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             ...chat,
             messages: [...chat.messages, message],
           };
-          saveChatToStorage(updatedChat);
           return updatedChat;
         }
         return chat;
@@ -345,7 +201,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             messages: [],
             title: "New Chat",
           };
-          saveChatToStorage(updatedChat);
           return updatedChat;
         }
         return chat;
@@ -353,8 +208,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     );
   };
 
-  // Update system prompt for current chat
-  const updateSystemPrompt = (prompt: string) => {
+  const updateCurrentChat = (updates: Partial<ChatType>): void => {
     if (!currentChatId) return;
 
     setChats((prevChats) =>
@@ -362,9 +216,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         if (chat.id === currentChatId) {
           const updatedChat = {
             ...chat,
-            systemPrompt: prompt,
+            ...updates,
           };
-          saveChatToStorage(updatedChat);
           return updatedChat;
         }
         return chat;
@@ -372,24 +225,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     );
   };
 
-  // Update model for current chat
-  const updateModel = (model: ModelType) => {
-    if (!currentChatId) return;
-
-    setChats((prevChats) =>
-      prevChats.map((chat) => {
-        if (chat.id === currentChatId) {
-          const updatedChat = {
-            ...chat,
-            model,
-          };
-          saveChatToStorage(updatedChat);
-          return updatedChat;
-        }
-        return chat;
-      })
-    );
-  };
+  if (!currentChat) {
+    // shouldnt show anything until we've loaded in
+    return null;
+  }
 
   const contextValue: ChatContextType = {
     chats,
@@ -401,12 +240,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     addMessageToCurrentChat,
     clearCurrentChat,
     currentChat,
-    apiKey,
-    setApiKey,
-    modelConfig,
-    setModelConfig,
-    updateSystemPrompt,
-    updateModel,
+    updateCurrentChat,
     streaming,
     setStreaming,
     abortController,

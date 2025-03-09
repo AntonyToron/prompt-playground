@@ -1,10 +1,11 @@
-import { useChatContext, MessageType } from "./ChatContext";
+import { useChatContext } from "./ChatContext";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Square } from "lucide-react";
 import { toast } from "sonner";
+import { MessageType } from "@/types/chat";
 
 export function ChatInput({
   setCurrentResponse,
@@ -20,14 +21,14 @@ export function ChatInput({
 
   const {
     currentChat,
-    apiKey,
-    modelConfig,
     addMessageToCurrentChat,
     streaming,
     abortController,
     setAbortController,
     setConfigDialogOpen,
   } = useChatContext();
+
+  const { apiKey, modelConfig } = currentChat;
 
   // Auto-resize textarea
   useEffect(() => {
