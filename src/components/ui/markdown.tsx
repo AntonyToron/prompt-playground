@@ -43,7 +43,7 @@ const INITIAL_COMPONENTS: Partial<Components> = {
     }
     const language = extractLanguage(className);
     return (
-      <CodeBlock className={cn("my-6", className)}>
+      <CodeBlock className={className}>
         <CodeBlockCode code={children as string} language={language} />
       </CodeBlock>
     );
@@ -51,62 +51,6 @@ const INITIAL_COMPONENTS: Partial<Components> = {
   pre: function PreComponent({ children }) {
     return <>{children}</>;
   },
-  // Add spacing for paragraphs
-  p: function ParagraphComponent({ children, ...props }) {
-    return (
-      <p className="my-4" {...props}>
-        {children}
-      </p>
-    );
-  },
-  // Add spacing for headings
-  h1: ({ children, ...props }) => (
-    <h1 className="mt-8 mb-4" {...props}>
-      {children}
-    </h1>
-  ),
-  h2: ({ children, ...props }) => (
-    <h2 className="mt-8 mb-4" {...props}>
-      {children}
-    </h2>
-  ),
-  h3: ({ children, ...props }) => (
-    <h3 className="mt-6 mb-3" {...props}>
-      {children}
-    </h3>
-  ),
-  h4: ({ children, ...props }) => (
-    <h4 className="mt-6 mb-3" {...props}>
-      {children}
-    </h4>
-  ),
-  h5: ({ children, ...props }) => (
-    <h5 className="mt-4 mb-2" {...props}>
-      {children}
-    </h5>
-  ),
-  h6: ({ children, ...props }) => (
-    <h6 className="mt-4 mb-2" {...props}>
-      {children}
-    </h6>
-  ),
-  // Add spacing for lists
-  ul: ({ children, ...props }) => (
-    <ul className="my-4 ml-6 list-disc" {...props}>
-      {children}
-    </ul>
-  ),
-  ol: ({ children, ...props }) => (
-    <ol className="my-4 ml-6 list-decimal" {...props}>
-      {children}
-    </ol>
-  ),
-  // Add spacing for blockquotes
-  blockquote: ({ children, ...props }) => (
-    <blockquote className="my-4 pl-4 border-l-4 border-gray-300" {...props}>
-      {children}
-    </blockquote>
-  ),
 };
 
 const MemoizedMarkdownBlock = memo(

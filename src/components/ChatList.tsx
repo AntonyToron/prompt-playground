@@ -61,7 +61,7 @@ export function ChatList() {
     <div className="w-[20%]">
       <Card className="flex flex-col shadow-md gap-2 h-full">
         <CardHeader className="justify-start flex">
-          <CardTitle className="text-lg flex justify-start items-center">
+          <CardTitle className="text-base flex justify-start items-center">
             <span>Your chats</span>
           </CardTitle>
         </CardHeader>
@@ -71,7 +71,7 @@ export function ChatList() {
               <div
                 key={chat.id}
                 className={cn(
-                  `p-3 rounded-lg transition-colors flex items-center justify-between w-full`,
+                  `p-3 rounded-lg transition-colors flex items-center justify-between w-full border border-gray-200`,
                   chat.id === currentChatId
                     ? "bg-gray-100 dark:bg-gray-800 shadow-sm"
                     : "hover:bg-gray-50 dark:hover:bg-gray-900"
