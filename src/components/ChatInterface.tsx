@@ -14,7 +14,6 @@ import { ChatInput } from "./ChatInput";
 import { MessageContent } from "./MessageContent";
 import { BorderBeam } from "./magicui/border-beam";
 import { TextAnimate } from "./magicui/text-animate";
-import { ShineBorder } from "./magicui/shine-border";
 
 const MessageWrapper = ({
   role,
@@ -35,9 +34,9 @@ const MessageWrapper = ({
     >
       <div
         className={cn(
-          "rounded-lg p-3 border max-w-[80%]",
+          "rounded-lg p-4 border max-w-[80%] min-w-[40%]",
           role === "user"
-            ? "bg-blue-100 text-blue-700 shadow-md border-blue-200"
+            ? "text-gray-700 shadow-md border-gray-200"
             : "bg-gray-100 dark:bg-gray-800 shadow-md border-gray-200"
         )}
       >
@@ -112,11 +111,9 @@ export function ChatInterface() {
   return (
     <Card
       className={cn(
-        "flex flex-col shadow-md h-full flex-1 pt-4 pb-0 gap-0 relative"
+        "flex flex-col shadow-md h-full flex-1 pt-4 pb-0 gap-0 relative overflow-hidden"
       )}
     >
-      <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
-
       <CardHeader className={cn("border-b pb-3 flex-shrink-0")}>
         <div className={cn("flex items-center justify-between")}>
           <div>
@@ -147,6 +144,10 @@ export function ChatInterface() {
       </CardHeader>
       <CardContent className={cn("flex-1 p-0 overflow-hidden")}>
         <ScrollArea className={cn("px-4 h-full")}>
+          {(isLoading || currentResponse) && (
+            <BorderBeam duration={8} size={100} />
+          )}
+
           {currentChat.messages.length === 0 ? (
             <div
               className={cn(
@@ -177,17 +178,21 @@ export function ChatInterface() {
                     }}
                     className={cn("flex justify-start")}
                   >
-                    <MessageWrapper role={"assistant"} className="relative">
-                      <BorderBeam duration={8} size={100} />
+                    <MessageWrapper role={"assistant"}>
                       {currentResponse ? (
                         <MessageContent content={currentResponse} />
                       ) : (
                         <div
                           className={cn(
-                            "flex space-x-2 items-center text-gray-500 text-xs"
+                            "flex space-x-2 items-center text-gray-500 relative whitespace-pre-wrap text-sm text-[0.85rem] leading-relaxed"
                           )}
                         >
-                          <TextAnimate animation="blurInUp" by="character" once>
+                          <TextAnimate
+                            animation="blurInUp"
+                            by="character"
+                            once
+                            className="w-full min-w-md"
+                          >
                             Generating response...
                           </TextAnimate>
                         </div>
