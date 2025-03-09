@@ -127,7 +127,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   // Create a new chat
   const createNewChat = () => {
     const newChat = createDefaultChat();
-    setChats((prevChats) => [...prevChats, newChat]);
+    setChats((prevChats) => {
+      const lastChat = prevChats.at(-1);
+      if (lastChat) {
+        const { id, messages, title, ...propsToInherit } = lastChat;
+        return [...prevChats, { ...newChat, ...propsToInherit }];
+      }
+
+      return [...prevChats, newChat];
+    });
     setCurrentChatId(newChat.id);
   };
 

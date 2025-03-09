@@ -11,10 +11,10 @@ import { Trash2, Sparkles, Bot, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ChatInput } from "./ChatInput";
-import { MessageContent } from "./MessageContent";
 import { BorderBeam } from "./magicui/border-beam";
 import { TextAnimate } from "./magicui/text-animate";
 import { MessageType } from "@/types/chat";
+import { MessageContent } from "./ui/message";
 
 const MessageWrapper = ({
   role,
@@ -163,7 +163,7 @@ export function ChatInterface() {
                 {/* Regular messages */}
                 {currentChat.messages.map((message, index) => (
                   <MessageWrapper role={message.role} key={index}>
-                    <MessageContent content={message.content} />
+                    <MessageContent>{message.content}</MessageContent>
                   </MessageWrapper>
                 ))}
 
@@ -181,7 +181,7 @@ export function ChatInterface() {
                   >
                     <MessageWrapper role={"assistant"}>
                       {currentResponse ? (
-                        <MessageContent content={currentResponse} />
+                        <MessageContent>{currentResponse}</MessageContent>
                       ) : (
                         <div
                           className={cn(
