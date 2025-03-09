@@ -58,7 +58,7 @@ export function ChatList() {
   };
 
   return (
-    <>
+    <div className="w-[20%]">
       <Card className="flex flex-col shadow-md gap-2 h-full">
         <CardHeader className="justify-start flex">
           <CardTitle className="text-lg flex justify-start items-center">
@@ -170,6 +170,6 @@ export function ChatList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

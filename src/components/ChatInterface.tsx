@@ -14,6 +14,7 @@ import { ChatInput } from "./ChatInput";
 import { MessageContent } from "./MessageContent";
 import { BorderBeam } from "./magicui/border-beam";
 import { TextAnimate } from "./magicui/text-animate";
+import { ShineBorder } from "./magicui/shine-border";
 
 const MessageWrapper = ({
   role,
@@ -109,8 +110,14 @@ export function ChatInterface() {
   }
 
   return (
-    <Card className={cn("flex flex-col shadow-md h-full flex-1 pt-4 pb-0")}>
-      <CardHeader className={cn("border-b pb-3")}>
+    <Card
+      className={cn(
+        "flex flex-col shadow-md h-full flex-1 pt-4 pb-0 gap-0 relative"
+      )}
+    >
+      <ShineBorder shineColor={["#A07CFE", "#FE8FB5", "#FFBE7B"]} />
+
+      <CardHeader className={cn("border-b pb-3 flex-shrink-0")}>
         <div className={cn("flex items-center justify-between")}>
           <div>
             <CardTitle className={cn("text-xl")}>{currentChat.title}</CardTitle>
@@ -138,10 +145,8 @@ export function ChatInterface() {
           </div>
         </div>
       </CardHeader>
-      <CardContent
-        className={cn("flex-grow overflow-hidden flex flex-col p-0")}
-      >
-        <ScrollArea className={cn("flex-grow px-4 max-h-[calc(100vh-250px)]")}>
+      <CardContent className={cn("flex-1 p-0 overflow-hidden")}>
+        <ScrollArea className={cn("px-4 h-full")}>
           {currentChat.messages.length === 0 ? (
             <div
               className={cn(
@@ -195,12 +200,14 @@ export function ChatInterface() {
             </div>
           )}
         </ScrollArea>
+      </CardContent>
+      <div className="flex-shrink-0">
         <ChatInput
           isLoading={isLoading}
           setCurrentResponse={setCurrentResponse}
           setIsLoading={setIsLoading}
         />
-      </CardContent>
+      </div>
     </Card>
   );
 }
