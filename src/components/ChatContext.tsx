@@ -109,6 +109,9 @@ type ChatContextType = {
   setStreaming: (streaming: boolean) => void;
   abortController: AbortController | null;
   setAbortController: (controller: AbortController | null) => void;
+
+  configDialogOpen: boolean;
+  setConfigDialogOpen: (open: boolean) => void;
 };
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -125,6 +128,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const [streaming, setStreaming] = useState<boolean>(true);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
   // Generate a unique ID
   const generateId = (): string => {
@@ -407,6 +411,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     setStreaming,
     abortController,
     setAbortController,
+    configDialogOpen,
+    setConfigDialogOpen,
   };
 
   return (

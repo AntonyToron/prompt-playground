@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Square } from "lucide-react";
+import { toast } from "sonner";
 
 export function ChatInput({
   setCurrentResponse,
@@ -25,6 +26,7 @@ export function ChatInput({
     streaming,
     abortController,
     setAbortController,
+    setConfigDialogOpen,
   } = useChatContext();
 
   // Auto-resize textarea
@@ -36,17 +38,22 @@ export function ChatInput({
     }
   }, [inputMessage]);
 
-  // Handle Enter key press
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
   // Send message to AI
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !apiKey || !currentChat) return;
+    if (!apiKey) {
+      toast("No API key", {
+        description: "Press to configure an API key first",
+        action: {
+          label: "Configure",
+          onClick: () => setConfigDialogOpen(true),
+        },
+      });
+      return;
+    }
+
+    if (!inputMessage.trim() || !currentChat) {
+      return;
+    }
 
     // Add user message to chat context
     const userMessage: MessageType = {
@@ -177,7 +184,12 @@ export function ChatInput({
             placeholder="Type your message..."
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
             className={cn(
               "resize-none rounded-full py-3 px-4 focus-visible:ring-0 focus-visible:ring-offset-0",
               "min-h-[50px] max-h-[150px] pr-14 border border-gray-200 shadow-sm w-full bg-white"

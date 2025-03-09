@@ -31,8 +31,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useChatContext, models } from "./ChatContext";
 
 export function ConfigDialog() {
-  const [open, setOpen] = useState(false);
-
   const {
     apiKey,
     setApiKey,
@@ -43,6 +41,8 @@ export function ConfigDialog() {
     streaming,
     setStreaming,
     updateSystemPrompt,
+    configDialogOpen: open,
+    setConfigDialogOpen: setOpen,
   } = useChatContext();
 
   // Handle model selection

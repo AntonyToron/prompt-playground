@@ -1,62 +1,48 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ReactNode } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useChatContext, MessageType } from "./ChatContext";
 import { ConfigDialog } from "./ConfigDialog";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Send,
-  Square,
-  Trash2,
-  Sparkles,
-  Bot,
-  MessageSquare,
-} from "lucide-react";
+import { Trash2, Sparkles, Bot, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ChatInput } from "./ChatInput";
+import { MessageContent } from "./MessageContent";
+import { BorderBeam } from "./magicui/border-beam";
+import { TextAnimate } from "./magicui/text-animate";
 
-// MessageContent component for rendering message content with markdown formatting
-const MessageContent = ({ content }: { content: string }) => {
-  // Simple markdown parsing for code blocks
-  const parts = content.split("```");
-
+const MessageWrapper = ({
+  role,
+  children,
+  className,
+}: {
+  role: MessageType["role"];
+  children: ReactNode;
+  className?: string;
+}) => {
   return (
-    <>
-      {parts.map((part, index) => {
-        if (index % 2 === 0) {
-          return (
-            <p
-              key={index}
-              className="whitespace-pre-wrap text-sm text-[0.85rem] leading-relaxed"
-            >
-              {part}
-            </p>
-          );
-        } else {
-          const [language, ...code] = part.split("\n");
-          return (
-            <pre
-              key={index}
-              className="bg-white dark:bg-gray-800 p-3 my-2 rounded-md overflow-x-auto"
-            >
-              <code className="text-xs font-mono">{code.join("\n")}</code>
-            </pre>
-          );
-        }
-      })}
-    </>
+    <div
+      className={cn(
+        "flex",
+        role === "user" ? "justify-end" : "justify-start",
+        className
+      )}
+    >
+      <div
+        className={cn(
+          "rounded-lg p-3 border max-w-[80%]",
+          role === "user"
+            ? "bg-blue-100 text-blue-700 shadow-md border-blue-200"
+            : "bg-gray-100 dark:bg-gray-800 shadow-md border-gray-200"
+        )}
+      >
+        {children}
+      </div>
+    </div>
   );
 };
 
@@ -84,6 +70,8 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { currentChat, clearCurrentChat } = useChatContext();
+
+  console.log({ currentResponse });
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -167,24 +155,9 @@ export function ChatInterface() {
               <AnimatePresence initial={false} mode="sync">
                 {/* Regular messages */}
                 {currentChat.messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      "flex",
-                      message.role === "user" ? "justify-end" : "justify-start"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "rounded-lg p-3 border max-w-[80%]",
-                        message.role === "user"
-                          ? "bg-blue-100 text-blue-700 shadow-md border-blue-200"
-                          : "bg-gray-100 dark:bg-gray-800 shadow-md border-gray-200"
-                      )}
-                    >
-                      <MessageContent content={message.content} />
-                    </div>
-                  </div>
+                  <MessageWrapper role={message.role} key={index}>
+                    <MessageContent content={message.content} />
+                  </MessageWrapper>
                 ))}
 
                 {/* Single assistant response element that handles both loading and streaming */}
@@ -199,54 +172,22 @@ export function ChatInterface() {
                     }}
                     className={cn("flex justify-start")}
                   >
-                    <div
-                      className={cn(
-                        "max-w-[80%] rounded-lg p-3 bg-gray-100 dark:bg-gray-800 shadow-md"
-                      )}
-                      style={{
-                        boxShadow:
-                          "0 2px 5px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04)",
-                      }}
-                    >
+                    <MessageWrapper role={"assistant"} className="relative">
+                      <BorderBeam duration={8} size={100} />
                       {currentResponse ? (
                         <MessageContent content={currentResponse} />
                       ) : (
-                        <div className={cn("flex space-x-2 items-center")}>
-                          <div className={cn("flex space-x-1")}>
-                            <motion.div
-                              className={cn("w-2 h-2 bg-gray-400 rounded-full")}
-                              animate={{ y: [0, -5, 0] }}
-                              transition={{
-                                repeat: Infinity,
-                                duration: 0.7,
-                                delay: 0,
-                              }}
-                            />
-                            <motion.div
-                              className={cn("w-2 h-2 bg-gray-400 rounded-full")}
-                              animate={{ y: [0, -5, 0] }}
-                              transition={{
-                                repeat: Infinity,
-                                duration: 0.7,
-                                delay: 0.2,
-                              }}
-                            />
-                            <motion.div
-                              className={cn("w-2 h-2 bg-gray-400 rounded-full")}
-                              animate={{ y: [0, -5, 0] }}
-                              transition={{
-                                repeat: Infinity,
-                                duration: 0.7,
-                                delay: 0.4,
-                              }}
-                            />
-                          </div>
-                          <span className={cn("text-xs text-gray-500")}>
+                        <div
+                          className={cn(
+                            "flex space-x-2 items-center text-gray-500 text-xs"
+                          )}
+                        >
+                          <TextAnimate animation="blurInUp" by="character" once>
                             Generating response...
-                          </span>
+                          </TextAnimate>
                         </div>
                       )}
-                    </div>
+                    </MessageWrapper>
                   </motion.div>
                 )}
               </AnimatePresence>
