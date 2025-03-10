@@ -15,6 +15,7 @@ import { BorderBeam } from "./magicui/border-beam";
 import { TextAnimate } from "./magicui/text-animate";
 import { MessageType } from "@/types/chat";
 import { MessageContent } from "./ui/message";
+import { ModelBadge } from "./ModelBadge";
 
 const MessageWrapper = ({
   role,
@@ -76,22 +77,6 @@ export function ChatInterface() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentChat?.messages, currentResponse]);
-
-  // Model Badge Component
-  const ModelBadge = ({
-    model,
-  }: {
-    model: { name: string; provider: string };
-  }) => (
-    <div
-      className={cn(
-        "flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full"
-      )}
-    >
-      {model.provider === "OpenAI" ? <Sparkles size={14} /> : <Bot size={14} />}
-      <span>{model.name}</span>
-    </div>
-  );
 
   if (!currentChat) {
     return (

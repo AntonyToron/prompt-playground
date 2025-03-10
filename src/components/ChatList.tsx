@@ -27,8 +27,14 @@ import {
   Check,
   X,
   CopyIcon,
+  TextIcon,
+  MessageSquareTextIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Textarea } from "./ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { ModelBadge } from "./ModelBadge";
 
 export function ChatList() {
   const {
@@ -37,31 +43,42 @@ export function ChatList() {
     setCurrentChatId,
     createNewChat,
     deleteChat,
-    updateChatTitle,
+    updateChat,
   } = useChatContext();
 
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false);
 
-  // Start editing a chat title
   const startEditing = (id: string, title: string) => {
     setEditingChatId(id);
     setEditTitle(title);
     setIsRenameModalOpen(true);
   };
 
-  // Save edited chat title
   const saveTitle = () => {
     if (editTitle.trim() && editingChatId) {
-      updateChatTitle(editingChatId, editTitle);
+      updateChat(editingChatId, { title: editTitle });
     }
     closeRenameModal();
   };
 
-  // Close rename modal and reset state
   const closeRenameModal = () => {
     setIsRenameModalOpen(false);
+    setEditingChatId(null);
+  };
+
+  const saveDescription = () => {
+    if (editDescription.trim() && editingChatId) {
+      updateChat(editingChatId, { description: editDescription });
+    }
+    closeDescriptionModal();
+  };
+
+  const closeDescriptionModal = () => {
+    setIsDescriptionModalOpen(false);
     setEditingChatId(null);
   };
 
@@ -86,11 +103,31 @@ export function ChatList() {
                 )}
                 onClick={() => setCurrentChatId(chat.id)}
               >
-                <div className="flex-1 min-w-0 mr-2">
+                <div className="flex-1 min-w-0 mr-2 flex flex-col">
                   <div className="text-sm font-medium truncate">
                     {chat.title}
                   </div>
+                  <div className={cn("mt-1 flex items-center gap-2")}>
+                    <ModelBadge
+                      model={chat.model}
+                      className={cn(
+                        chat.id !== currentChatId && "bg-gray-50 text-gray-700"
+                      )}
+                    />
+                  </div>
                 </div>
+                {chat.description && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <MessageSquareTextIcon className="h-4 w-4 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent className="flex flex-col gap-2">
+                      <div className="whitespace-pre-wrap max-w-lg">
+                        {chat.description}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -119,12 +156,26 @@ export function ChatList() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={(e) => {
+                        e.stopPropagation();
                         const { id, messages, title, ...propsToInherit } = chat;
                         createNewChat(propsToInherit);
                       }}
                     >
                       <CopyIcon size={16} className="mr-2" />
                       Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingChatId(chat.id);
+                        setEditDescription(chat.description || "");
+                        setIsDescriptionModalOpen(true);
+                      }}
+                    >
+                      <TextIcon size={16} className="mr-2" />
+                      {chat.description
+                        ? "Edit description"
+                        : "Add description"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={(e) => {
@@ -181,6 +232,44 @@ export function ChatList() {
               Cancel
             </Button>
             <Button onClick={saveTitle} size="sm">
+              <Check size={16} className="mr-2" />
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Description Modal */}
+      <Dialog
+        open={isDescriptionModalOpen}
+        onOpenChange={setIsDescriptionModalOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chat description</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              placeholder="Enter description"
+              className="w-full"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  saveDescription();
+                } else if (e.key === "Escape") {
+                  closeDescriptionModal();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button variant="outline" onClick={closeDescriptionModal} size="sm">
+              <X size={16} className="mr-2" />
+              Cancel
+            </Button>
+            <Button onClick={saveDescription} size="sm">
               <Check size={16} className="mr-2" />
               Save
             </Button>

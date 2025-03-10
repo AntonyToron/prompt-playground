@@ -36,9 +36,8 @@ type ChatContextType = {
   currentChatId: string | null;
   setCurrentChatId: (id: string) => void;
   updateCurrentChat: (updates: Partial<ChatType>) => void;
+  updateChat: (id: string, updates: Partial<ChatType>) => void;
   addMessageToCurrentChat: (message: MessageType) => void;
-
-  updateChatTitle: (id: string, title: string) => void;
 
   createNewChat: (init?: Partial<ChatType>) => void;
   deleteChat: (id: string) => void;
@@ -168,6 +167,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     );
   };
 
+  // Update chat title
+  const updateChatDescription = (id: string, description: string) => {
+    setChats((prevChats) =>
+      prevChats.map((chat) => {
+        if (chat.id === id) {
+          const updatedChat = { ...chat, description };
+          return updatedChat;
+        }
+        return chat;
+      })
+    );
+  };
+
   // Add message to current chat
   const addMessageToCurrentChat = (message: MessageType) => {
     if (!currentChatId) return;
@@ -216,13 +228,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     );
   };
 
-  const updateCurrentChat = (updates: Partial<ChatType>): void => {
-    if (!currentChatId) return;
-
+  const updateChat = (id: string, updates: Partial<ChatType>): void => {
     setChats((prevChats) =>
       prevChats.map((chat) => {
-        if (chat.id === currentChatId) {
-          const updatedChat = {
+        if (chat.id === id) {
+          const updatedChat: ChatType = {
             ...chat,
             ...updates,
           };
@@ -231,6 +241,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         return chat;
       })
     );
+  };
+
+  const updateCurrentChat = (updates: Partial<ChatType>): void => {
+    if (!currentChatId) return;
+    updateChat(currentChatId, updates);
   };
 
   if (!currentChat) {
@@ -244,7 +259,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     setCurrentChatId,
     createNewChat,
     deleteChat,
-    updateChatTitle,
     addMessageToCurrentChat,
     clearCurrentChat,
     currentChat,
@@ -255,6 +269,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     setAbortController,
     configDialogOpen,
     setConfigDialogOpen,
+    updateChat,
   };
 
   return (

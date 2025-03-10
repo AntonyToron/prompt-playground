@@ -28,6 +28,7 @@ export type ModelConfigType = {
 export type ChatType = {
   id: string;
   title: string;
+  description?: string;
   messages: MessageType[];
   systemPrompt: string;
 
