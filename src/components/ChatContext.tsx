@@ -32,6 +32,7 @@ const STORAGE_KEY = "playground_chats";
 // Create context with default value
 type ChatContextType = {
   chats: ChatType[];
+  setChats: (update: React.SetStateAction<ChatType[]>) => void;
 
   currentChatId: string | null;
   setCurrentChatId: (id: string) => void;
@@ -154,25 +155,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  // Update chat title
   const updateChatTitle = (id: string, title: string) => {
     setChats((prevChats) =>
       prevChats.map((chat) => {
         if (chat.id === id) {
           const updatedChat = { ...chat, title };
-          return updatedChat;
-        }
-        return chat;
-      })
-    );
-  };
-
-  // Update chat title
-  const updateChatDescription = (id: string, description: string) => {
-    setChats((prevChats) =>
-      prevChats.map((chat) => {
-        if (chat.id === id) {
-          const updatedChat = { ...chat, description };
           return updatedChat;
         }
         return chat;
@@ -255,6 +242,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
   const contextValue: ChatContextType = {
     chats,
+    setChats,
     currentChatId,
     setCurrentChatId,
     createNewChat,
