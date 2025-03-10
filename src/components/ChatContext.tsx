@@ -40,7 +40,7 @@ type ChatContextType = {
 
   updateChatTitle: (id: string, title: string) => void;
 
-  createNewChat: () => void;
+  createNewChat: (init?: Partial<ChatType>) => void;
   deleteChat: (id: string) => void;
   clearCurrentChat: () => void;
   currentChat: ChatType;
@@ -125,16 +125,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     : null;
 
   // Create a new chat
-  const createNewChat = () => {
+  const createNewChat = (init?: Partial<ChatType>) => {
     const newChat = createDefaultChat();
     setChats((prevChats) => {
       const lastChat = prevChats.at(-1);
-      if (lastChat) {
+      if (lastChat && !init) {
         const { id, messages, title, ...propsToInherit } = lastChat;
         return [...prevChats, { ...newChat, ...propsToInherit }];
       }
 
-      return [...prevChats, newChat];
+      return [...prevChats, { ...newChat, ...init }];
     });
     setCurrentChatId(newChat.id);
   };

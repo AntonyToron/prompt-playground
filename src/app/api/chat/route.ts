@@ -3,6 +3,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { streamText } from "ai";
 import { NextRequest, NextResponse } from "next/server";
+import { ChatRequestType } from "@/types/chat";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +20,8 @@ export async function POST(req: NextRequest) {
       topK,
       maxTokens,
       headers = [],
-    } = await req.json();
+      outputFormat,
+    } = (await req.json()) as ChatRequestType;
 
     // Validate required fields
     if (!messages || !model || !apiKey) {
@@ -46,13 +48,11 @@ export async function POST(req: NextRequest) {
     // Prepare custom headers if provided
     const customHeaders: { [key: string]: string } = {};
     if (headers && headers.length > 0) {
-      (headers as { key: string; value: string }[]).forEach(
-        ({ key, value }) => {
-          if (key && value) {
-            customHeaders[key] = value;
-          }
+      headers.forEach(({ key, value }) => {
+        if (key && value) {
+          customHeaders[key] = value;
         }
-      );
+      });
     }
 
     // Create stream response
@@ -65,6 +65,20 @@ export async function POST(req: NextRequest) {
       ...(isAnthropicModel ? { topK } : {}),
       maxTokens: safeMaxTokens,
       abortSignal: signal,
+
+      ...(outputFormat && !isAnthropicModel
+        ? {
+            response_format:
+              outputFormat.type === "json_schema" && outputFormat.schema
+                ? {
+                    type: "json_object",
+                    schema: JSON.parse(outputFormat.schema),
+                  }
+                : outputFormat.type === "json_object"
+                ? { type: "json_object" }
+                : { type: "text" },
+          }
+        : {}),
     });
 
     // Create a stream response from the textStream

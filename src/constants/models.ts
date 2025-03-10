@@ -31,3 +31,41 @@ export const MODELS: ModelType[] = [
     provider: "anthropic",
   },
 ];
+
+export const EXAMPLE_JSON_SCHEMA = `{
+  "name": "math_response",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "steps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "explanation": {
+              "type": "string"
+            },
+            "output": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "explanation",
+            "output"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "final_answer": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "steps",
+      "final_answer"
+    ]
+  }
+}
+`;

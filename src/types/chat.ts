@@ -16,6 +16,13 @@ export type ModelConfigType = {
   topK: number;
   maxTokens: number;
   headers: { key: string; value: string }[];
+  outputFormat?: {
+    // schema = enforced specific json, json_object = any json
+    type: "json_object" | "json_schema" | "text";
+
+    // will enforce on frontend to be valid JSON
+    schema?: string;
+  };
 };
 
 export type ChatType = {
@@ -30,3 +37,9 @@ export type ChatType = {
 
   apiKey: string;
 };
+
+export type ChatRequestType = Pick<
+  ChatType,
+  "messages" | "model" | "apiKey" | "systemPrompt"
+> &
+  ModelConfigType;

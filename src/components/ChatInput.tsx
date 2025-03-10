@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Send, Square } from "lucide-react";
 import { toast } from "sonner";
 import { MessageType } from "@/types/chat";
+import { ChatRequestType } from "@/types/chat";
 
 export function ChatInput({
   setCurrentResponse,
@@ -102,7 +103,8 @@ export function ChatInput({
           topK: modelConfig.topK,
           maxTokens: modelConfig.maxTokens,
           headers: modelConfig.headers,
-        }),
+          outputFormat: modelConfig.outputFormat,
+        } satisfies ChatRequestType),
         signal: controller.signal,
       });
 
@@ -192,7 +194,7 @@ export function ChatInput({
               }
             }}
             className={cn(
-              "resize-none rounded-full py-3 px-4 focus-visible:ring-0 focus-visible:ring-offset-0",
+              "resize-none py-3 px-4 focus-visible:ring-0 focus-visible:ring-offset-0",
               "min-h-[50px] max-h-[150px] pr-14 border border-gray-200 shadow-sm w-full bg-white"
             )}
             disabled={isLoading}

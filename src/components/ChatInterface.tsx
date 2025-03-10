@@ -72,8 +72,6 @@ export function ChatInterface() {
 
   const { currentChat, clearCurrentChat } = useChatContext();
 
-  console.log({ currentResponse });
-
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -143,12 +141,8 @@ export function ChatInterface() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className={cn("flex-1 p-0 overflow-hidden")}>
+      <CardContent className={cn("flex-1 p-0 overflow-hidden relative")}>
         <ScrollArea className={cn("px-4 h-full")}>
-          {(isLoading || currentResponse) && (
-            <BorderBeam duration={8} size={100} />
-          )}
-
           {currentChat.messages.length === 0 ? (
             <div
               className={cn(
@@ -207,12 +201,15 @@ export function ChatInterface() {
           )}
         </ScrollArea>
       </CardContent>
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 relative overflow-hidden">
         <ChatInput
           isLoading={isLoading}
           setCurrentResponse={setCurrentResponse}
           setIsLoading={setIsLoading}
         />
+        {(isLoading || currentResponse) && (
+          <BorderBeam duration={8} size={100} />
+        )}
       </div>
     </Card>
   );

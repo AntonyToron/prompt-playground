@@ -19,7 +19,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useChatContext } from "./ChatContext";
-import { PlusIcon, MoreVertical, Pencil, Trash2, Check, X } from "lucide-react";
+import {
+  PlusIcon,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+  CopyIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ChatList() {
@@ -111,6 +119,15 @@ export function ChatList() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={(e) => {
+                        const { id, messages, title, ...propsToInherit } = chat;
+                        createNewChat(propsToInherit);
+                      }}
+                    >
+                      <CopyIcon size={16} className="mr-2" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
                         e.stopPropagation();
                         deleteChat(chat.id);
                       }}
@@ -125,7 +142,7 @@ export function ChatList() {
             ))}
           </div>
           <Button
-            onClick={createNewChat}
+            onClick={() => createNewChat()}
             size="sm"
             variant="outline"
             className="h-8 mt-4"
