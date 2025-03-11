@@ -1,3 +1,5 @@
+import { ToolSet } from "ai";
+
 // Type definitions
 export type MessageType = {
   role: "user" | "assistant" | "system";
@@ -23,6 +25,8 @@ export type ModelConfigType = {
     // will enforce on frontend to be valid JSON
     schema?: string;
   };
+
+  tools?: ToolSet;
 };
 
 export type ChatType = {

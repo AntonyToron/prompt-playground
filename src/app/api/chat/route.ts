@@ -75,8 +75,8 @@ export async function POST(req: NextRequest) {
                     schema: JSON.parse(outputFormat.schema),
                   }
                 : outputFormat.type === "json_object"
-                ? { type: "json_object" }
-                : { type: "text" },
+                  ? { type: "json_object" }
+                  : { type: "text" },
           }
         : {}),
     });

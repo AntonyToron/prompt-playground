@@ -104,6 +104,7 @@ export function ChatInput({
           maxTokens: modelConfig.maxTokens,
           headers: modelConfig.headers,
           outputFormat: modelConfig.outputFormat,
+          // tools: modelConfig.tools,
         } satisfies ChatRequestType),
         signal: controller.signal,
       });

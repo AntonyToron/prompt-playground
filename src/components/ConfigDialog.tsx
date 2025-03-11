@@ -31,6 +31,8 @@ import {
   FileJson,
   Loader2,
   CurlyBraces,
+  Trash2,
+  PlusCircle,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ChatType } from "@/types/chat";
@@ -41,11 +43,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 import { useChatContext } from "./ChatContext";
 import { MODELS } from "@/constants/models";
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { EXAMPLE_JSON_SCHEMA } from "@/constants/models";
+import debounce from "lodash/debounce";
 
 const SelectItemWithDescription = ({
   value,
@@ -278,6 +282,703 @@ const OutputFormatTab = ({
   );
 };
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
+// Example tool template to help users get started
+const EXAMPLE_TOOL = {
+  type: "function",
+  function: {
+    name: "get_weather",
+    description: "Get the current weather in a given location",
+    parameters: {
+      type: "object",
+      properties: {
+        location: {
+          type: "string",
+          description: "The city and state, e.g. San Francisco, CA",
+        },
+        unit: {
+          type: "string",
+          enum: ["celsius", "fahrenheit"],
+          description: "The unit of temperature to use",
+        },
+      },
+      required: ["location"],
+    },
+  },
+};
+
+// Parameter types for select options
+const PARAMETER_TYPES = [
+  { value: "string", label: "String" },
+  { value: "number", label: "Number" },
+  { value: "boolean", label: "Boolean" },
+  { value: "object", label: "Object" },
+  { value: "array", label: "Array" },
+  { value: "null", label: "Null" },
+];
+
+// Parameter field component to reduce re-renders
+const ParameterField = ({
+  toolId,
+  paramName,
+  paramConfig,
+  onUpdate,
+  onRemove,
+  requiredParams,
+}: {
+  toolId: string;
+  paramName: string;
+  paramConfig: any;
+  onUpdate: (
+    toolId: string,
+    paramName: string,
+    field: string,
+    value: any
+  ) => void;
+  onRemove: (toolId: string, paramName: string) => void;
+  requiredParams: string[];
+}) => {
+  // Using useRef to maintain focus
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const descInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Debounced update handlers
+  const updateName = useCallback(
+    debounce((value: string) => {
+      onUpdate(toolId, paramName, "name", value);
+    }, 500),
+    [toolId, paramName, onUpdate]
+  );
+
+  const updateType = useCallback(
+    (value: string) => {
+      onUpdate(toolId, paramName, "type", value);
+    },
+    [toolId, paramName, onUpdate]
+  );
+
+  const updateRequired = useCallback(
+    (checked: boolean) => {
+      onUpdate(toolId, paramName, "required", checked);
+    },
+    [toolId, paramName, onUpdate]
+  );
+
+  const updateDescription = useCallback(
+    debounce((value: string) => {
+      onUpdate(toolId, paramName, "description", value);
+    }, 500),
+    [toolId, paramName, onUpdate]
+  );
+
+  return (
+    <div className="border rounded-md p-3 space-y-2">
+      <div className="flex justify-between items-center">
+        <div className="flex-1">
+          <Label
+            htmlFor={`param-name-${toolId}-${paramName}`}
+            className="text-xs text-gray-500"
+          >
+            Name
+          </Label>
+          <Input
+            id={`param-name-${toolId}-${paramName}`}
+            ref={nameInputRef}
+            defaultValue={paramName}
+            onChange={(e) => updateName(e.target.value)}
+            placeholder="Parameter name"
+            className="mt-1"
+          />
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onRemove(toolId, paramName)}
+          className="ml-2"
+        >
+          <Trash2 className="h-4 w-4 text-gray-500" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label
+            htmlFor={`param-type-${toolId}-${paramName}`}
+            className="text-xs text-gray-500"
+          >
+            Type
+          </Label>
+          <Select
+            value={paramConfig.type || "string"}
+            onValueChange={updateType}
+          >
+            <SelectTrigger
+              id={`param-type-${toolId}-${paramName}`}
+              className="mt-1"
+            >
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              {PARAMETER_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-end pb-2">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={`param-required-${toolId}-${paramName}`}
+              checked={requiredParams.includes(paramName)}
+              onCheckedChange={updateRequired}
+            />
+            <Label
+              htmlFor={`param-required-${toolId}-${paramName}`}
+              className="text-sm"
+            >
+              Required
+            </Label>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <Label
+          htmlFor={`param-desc-${toolId}-${paramName}`}
+          className="text-xs text-gray-500"
+        >
+          Description
+        </Label>
+        <Textarea
+          id={`param-desc-${toolId}-${paramName}`}
+          ref={descInputRef}
+          defaultValue={paramConfig.description || ""}
+          onChange={(e) => updateDescription(e.target.value)}
+          placeholder="Parameter description"
+          className="mt-1 min-h-[60px]"
+        />
+      </div>
+    </div>
+  );
+};
+
+// Tool component to reduce re-renders
+const ToolComponent = ({
+  toolId,
+  tool,
+  onRemove,
+  onUpdate,
+  onAddParameter,
+  onUpdateParameter,
+  onRemoveParameter,
+}: {
+  toolId: string;
+  tool: any;
+  onRemove: (toolId: string) => void;
+  onUpdate: (toolId: string, field: string, value: string) => void;
+  onAddParameter: (toolId: string) => void;
+  onUpdateParameter: (
+    toolId: string,
+    paramName: string,
+    field: string,
+    value: any
+  ) => void;
+  onRemoveParameter: (toolId: string, paramName: string) => void;
+}) => {
+  // Using useRef to maintain focus
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const descInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Debounced update handlers
+  const updateName = useCallback(
+    debounce((value: string) => {
+      onUpdate(toolId, "name", value);
+    }, 500),
+    [toolId, onUpdate]
+  );
+
+  const updateDescription = useCallback(
+    debounce((value: string) => {
+      onUpdate(toolId, "description", value);
+    }, 500),
+    [toolId, onUpdate]
+  );
+
+  return (
+    <AccordionContent className="space-y-4 px-1">
+      <div className="space-y-2">
+        <Label htmlFor={`tool-name-${toolId}`}>Name</Label>
+        <Input
+          id={`tool-name-${toolId}`}
+          ref={nameInputRef}
+          defaultValue={tool.function.name}
+          onChange={(e) => updateName(e.target.value)}
+          placeholder="Tool name"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`tool-desc-${toolId}`}>Description</Label>
+        <Textarea
+          id={`tool-desc-${toolId}`}
+          ref={descInputRef}
+          defaultValue={tool.function.description}
+          onChange={(e) => updateDescription(e.target.value)}
+          placeholder="What this tool does..."
+          className="min-h-[80px]"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <Label>Parameters</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onAddParameter(toolId)}
+          >
+            <PlusCircle className="h-4 w-4 mr-1" />
+            Add Parameter
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          {Object.entries(tool.function.parameters.properties || {}).map(
+            ([paramName, paramConfig]: [string, any], paramIndex) => (
+              <ParameterField
+                // dont include param name here or else defocuses each time
+                key={`param-${toolId}-${paramIndex}`}
+                toolId={toolId}
+                paramName={paramName}
+                paramConfig={paramConfig}
+                onUpdate={onUpdateParameter}
+                onRemove={onRemoveParameter}
+                requiredParams={tool.function.parameters.required || []}
+              />
+            )
+          )}
+
+          {Object.keys(tool.function.parameters.properties || {}).length ===
+            0 && (
+            <div className="text-center text-gray-500 text-sm py-2">
+              No parameters defined for this tool
+            </div>
+          )}
+        </div>
+      </div>
+    </AccordionContent>
+  );
+};
+
+export function ToolTab({
+  updateModelConfig,
+}: {
+  updateModelConfig: (updates: Partial<ChatType["modelConfig"]>) => void;
+}) {
+  const { currentChat } = useChatContext();
+
+  const [toolsEnabled, setToolsEnabled] = useState(false);
+  const [tools, setTools] = useState<Record<string, any>>({});
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [expandedTools, setExpandedTools] = useState<string[]>([]);
+  const [currentEditMode, setCurrentEditMode] = useState<"visual" | "json">(
+    "visual"
+  );
+
+  const initialized = useRef(false);
+  useEffect(() => {
+    if (!initialized.current && currentChat?.modelConfig?.tools) {
+      initialized.current = true;
+      setTools(currentChat.modelConfig.tools);
+      if (Object.keys(currentChat.modelConfig.tools).length > 0) {
+        setToolsEnabled(true);
+      }
+    }
+  }, [currentChat]);
+
+  const debouncedUpdateConfig = useCallback(
+    debounce((updatedTools: Record<string, any>) => {
+      updateModelConfig({ tools: updatedTools });
+    }, 1000),
+    [updateModelConfig]
+  );
+
+  const handleToolsToggle = useCallback(
+    (enabled: boolean) => {
+      setToolsEnabled(enabled);
+      if (enabled) {
+        debouncedUpdateConfig(tools);
+      } else {
+        updateModelConfig({ tools: {} });
+      }
+    },
+    [tools, debouncedUpdateConfig, updateModelConfig]
+  );
+
+  const addTool = useCallback(() => {
+    const toolId = `tool_${Object.keys(tools).length + 1}`;
+    const newTool = {
+      type: "function",
+      function: {
+        name: toolId,
+        description: "",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+    };
+
+    const updatedTools = { ...tools, [toolId]: newTool };
+    setTools(updatedTools);
+    setExpandedTools((prev) => [...prev, toolId]);
+    debouncedUpdateConfig(updatedTools);
+  }, [tools, debouncedUpdateConfig, setExpandedTools]);
+
+  const addParameterToTool = useCallback(
+    (toolId: string) => {
+      const updatedTools = { ...tools };
+      const paramKey = `param_${
+        Object.keys(updatedTools[toolId].function.parameters.properties)
+          .length + 1
+      }`;
+
+      updatedTools[toolId].function.parameters.properties[paramKey] = {
+        type: "string",
+        description: "",
+      };
+
+      setTools(updatedTools);
+      debouncedUpdateConfig(updatedTools);
+    },
+    [tools, debouncedUpdateConfig]
+  );
+
+  const updateToolField = useCallback(
+    (toolId: string, field: string, value: string) => {
+      const updatedTools = { ...tools };
+      if (field === "name") {
+        updatedTools[toolId].function.name = value;
+      } else if (field === "description") {
+        updatedTools[toolId].function.description = value;
+      }
+
+      setTools(updatedTools);
+      debouncedUpdateConfig(updatedTools);
+    },
+    [tools, debouncedUpdateConfig]
+  );
+
+  const updateParameterField = useCallback(
+    (
+      toolId: string,
+      paramName: string,
+      field: string,
+      value: string | boolean
+    ) => {
+      const updatedTools = { ...tools };
+
+      if (field === "type") {
+        updatedTools[toolId].function.parameters.properties[paramName].type =
+          value;
+      } else if (field === "description") {
+        updatedTools[toolId].function.parameters.properties[
+          paramName
+        ].description = value;
+      } else if (field === "required") {
+        const requiredParams =
+          updatedTools[toolId].function.parameters.required || [];
+
+        if (value && !requiredParams.includes(paramName)) {
+          updatedTools[toolId].function.parameters.required = [
+            ...requiredParams,
+            paramName,
+          ];
+        } else if (!value) {
+          updatedTools[toolId].function.parameters.required =
+            requiredParams.filter((p: string) => p !== paramName);
+        }
+      } else if (field === "name" && paramName !== value) {
+        const paramProps = updatedTools[toolId].function.parameters.properties;
+        const paramConfig = paramProps[paramName];
+
+        paramProps[value as string] = paramConfig;
+        delete paramProps[paramName];
+
+        const requiredParams =
+          updatedTools[toolId].function.parameters.required || [];
+        const requiredIndex = requiredParams.indexOf(paramName);
+        if (requiredIndex !== -1) {
+          requiredParams[requiredIndex] = value as string;
+        }
+      }
+
+      setTools(updatedTools);
+      debouncedUpdateConfig(updatedTools);
+    },
+    [tools, debouncedUpdateConfig]
+  );
+
+  const removeParameter = useCallback(
+    (toolId: string, paramName: string) => {
+      const updatedTools = { ...tools };
+
+      delete updatedTools[toolId].function.parameters.properties[paramName];
+
+      const requiredParams =
+        updatedTools[toolId].function.parameters.required || [];
+      updatedTools[toolId].function.parameters.required = requiredParams.filter(
+        (p: string) => p !== paramName
+      );
+
+      setTools(updatedTools);
+      debouncedUpdateConfig(updatedTools);
+    },
+    [tools, debouncedUpdateConfig]
+  );
+
+  const removeTool = useCallback(
+    (toolId: string) => {
+      const updatedTools = { ...tools };
+      delete updatedTools[toolId];
+      setTools(updatedTools);
+      debouncedUpdateConfig(updatedTools);
+    },
+    [tools, debouncedUpdateConfig]
+  );
+
+  const importToolsFromJson = useCallback(
+    (jsonStr: string) => {
+      try {
+        const parsedTools = JSON.parse(jsonStr);
+
+        // Validate that it's an object (Record)
+        if (
+          typeof parsedTools !== "object" ||
+          parsedTools === null ||
+          Array.isArray(parsedTools)
+        ) {
+          setJsonError("Tools must be a Record<string, Tool> object");
+          return;
+        }
+
+        // Basic validation of tool structure
+        const isValid = Object.values(parsedTools).every(
+          (tool: any) =>
+            tool.type === "function" &&
+            tool.function &&
+            typeof tool.function.name === "string" &&
+            tool.function.parameters &&
+            tool.function.parameters.type === "object"
+        );
+
+        if (!isValid) {
+          setJsonError("Invalid tool format");
+          return;
+        }
+
+        setTools(parsedTools);
+        setJsonError(null);
+        updateModelConfig({ tools: parsedTools });
+        toast.success("Tools imported successfully");
+      } catch (error) {
+        setJsonError("Invalid JSON format");
+      }
+    },
+    [updateModelConfig]
+  );
+
+  const handleJsonChange = useCallback((jsonStr: string) => {
+    try {
+      JSON.parse(jsonStr);
+      setJsonError(null);
+    } catch (error) {
+      setJsonError("Invalid JSON format");
+    }
+  }, []);
+
+  const formatTools = useCallback(() => {
+    try {
+      return JSON.stringify(tools, null, 2);
+    } catch (error) {
+      return "{}";
+    }
+  }, [tools]);
+
+  const jsonTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <div className="flex items-center font-medium text-sm space-x-2">
+          <div>Tool/function calls</div>
+          <Badge variant={"secondary"}>Beta/non-functioning</Badge>
+        </div>
+        <div className="text-gray-400 text-xs mb-4">
+          Define tools that the LLM can request to use. This helps the model
+          understand what functions are available and their required parameters.
+        </div>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="enable-tools"
+          checked={toolsEnabled}
+          onCheckedChange={handleToolsToggle}
+        />
+        <Label htmlFor="enable-tools">Enable tool definitions</Label>
+      </div>
+
+      {toolsEnabled && (
+        <>
+          <div className="space-y-2">
+            <div className="flex space-x-2">
+              <Button
+                variant={currentEditMode === "visual" ? "outline" : "ghost"}
+                onClick={() => setCurrentEditMode("visual")}
+                className="flex-1"
+              >
+                Visual Editor
+              </Button>
+              <Button
+                variant={currentEditMode === "json" ? "outline" : "ghost"}
+                onClick={() => setCurrentEditMode("json")}
+                className="flex-1"
+              >
+                JSON Editor
+              </Button>
+            </div>
+
+            {currentEditMode === "visual" ? (
+              <div className="space-y-4 px-2 py-1">
+                <Accordion
+                  type="multiple"
+                  value={expandedTools}
+                  onValueChange={setExpandedTools}
+                  className="space-y-2"
+                >
+                  {Object.entries(tools).map(([toolId, tool], index) => (
+                    <AccordionItem
+                      key={`tool-${index}`}
+                      value={toolId}
+                      className="border rounded-md p-4"
+                    >
+                      <div className="flex justify-between items-center">
+                        <AccordionTrigger className="hover:no-underline">
+                          <span className="font-medium">
+                            {tool.function.name || toolId}
+                          </span>
+                        </AccordionTrigger>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeTool(toolId);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-gray-500" />
+                        </Button>
+                      </div>
+
+                      {/* Extract tool content to its own component to reduce re-renders */}
+                      <ToolComponent
+                        toolId={toolId}
+                        tool={tool}
+                        onRemove={removeTool}
+                        onUpdate={updateToolField}
+                        onAddParameter={addParameterToTool}
+                        onUpdateParameter={updateParameterField}
+                        onRemoveParameter={removeParameter}
+                      />
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+
+                {Object.keys(tools).length === 0 && (
+                  <div className="text-center text-gray-500 py-4">
+                    No tools defined. Add a tool to get started.
+                  </div>
+                )}
+
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={addTool}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Tool
+                  </Button>
+                </div>
+
+                <div className="text-xs text-gray-500">
+                  Define the tools the model can use during the conversation.
+                  Each tool should have a clear name, description, and
+                  parameters.
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Textarea
+                  ref={jsonTextareaRef}
+                  defaultValue={formatTools()}
+                  onChange={(e) => {
+                    handleJsonChange(e.target.value);
+                    importToolsFromJson(e.target.value);
+                  }}
+                  placeholder={JSON.stringify(
+                    { example: EXAMPLE_TOOL },
+                    null,
+                    2
+                  )}
+                  className="min-h-[300px] font-mono text-sm"
+                />
+
+                {jsonError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{jsonError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const formatted = formatTools();
+                      importToolsFromJson(formatted);
+                    }}
+                  >
+                    <CurlyBraces className="h-4 w-4 mr-2" />
+                    Format JSON
+                  </Button>
+                </div>
+
+                <div className="text-xs text-gray-500">
+                  Edit tools directly in JSON format. The structure should
+                  follow the format used by the OpenAI and Anthropic API for
+                  function calling.
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function ConfigDialog() {
   const {
     currentChat,
@@ -362,12 +1063,13 @@ export function ConfigDialog() {
         </DialogHeader>
 
         <Tabs defaultValue="model">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="model">Model</TabsTrigger>
             <TabsTrigger value="params">Parameters</TabsTrigger>
             <TabsTrigger value="headers">Headers</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
             <TabsTrigger value="output">Output</TabsTrigger>
+            <TabsTrigger value="tools">Tools</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="h-64 sm:h-86 overflow-y-auto">
@@ -516,7 +1218,7 @@ export function ConfigDialog() {
                   <Slider
                     id="max-tokens"
                     min={10}
-                    max={4000}
+                    max={30000}
                     step={10}
                     value={[modelConfig.maxTokens]}
                     onValueChange={([value]) =>
@@ -606,6 +1308,10 @@ export function ConfigDialog() {
 
             <TabsContent value="output" className="py-4 space-y-2 px-4">
               <OutputFormatTab updateModelConfig={updateModelConfig} />
+            </TabsContent>
+
+            <TabsContent value="tools" className="py-4 space-y-2 px-2">
+              <ToolTab updateModelConfig={updateModelConfig} />
             </TabsContent>
           </ScrollArea>
         </Tabs>
