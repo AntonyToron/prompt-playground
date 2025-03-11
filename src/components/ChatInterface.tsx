@@ -127,7 +127,7 @@ export function ChatInterface() {
         </div>
       </CardHeader>
       <CardContent className={cn("flex-1 p-0 overflow-hidden relative")}>
-        <ScrollArea className={cn("px-4 h-full")}>
+        <div className={cn("px-4 h-full overflow-y-auto")}>
           {currentChat.messages.length === 0 ? (
             <div
               className={cn(
@@ -184,7 +184,7 @@ export function ChatInterface() {
               <div ref={messagesEndRef} />
             </div>
           )}
-        </ScrollArea>
+        </div>
       </CardContent>
       <div className="flex-shrink-0 relative overflow-hidden">
         <ChatInput
