@@ -14,7 +14,11 @@ export const ModelBadge = ({
       className
     )}
   >
-    {model.provider === "OpenAI" ? <Sparkles size={14} /> : <Bot size={14} />}
+    {model.provider === "OpenAI" ? (
+      <Sparkles size={14} className="flex-shrink-0" />
+    ) : (
+      <Bot size={14} className="flex-shrink-0" />
+    )}
     <span>{model.name}</span>
   </div>
 );

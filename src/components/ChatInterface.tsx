@@ -156,7 +156,7 @@ export function ChatInterface() {
                       opacity: { duration: 0.3 },
                       y: { duration: 0.3 },
                     }}
-                    className={cn("flex justify-start")}
+                    className={cn("flex justify-start max-w-[80%]")}
                   >
                     <MessageWrapper role={"assistant"}>
                       {currentResponse ? (

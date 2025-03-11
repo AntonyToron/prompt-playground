@@ -84,7 +84,7 @@ export function ChatList() {
 
   return (
     <div className="w-[20%]">
-      <Card className="flex flex-col shadow-md gap-2 h-full">
+      <Card className="flex flex-col shadow-md gap-2 h-full overflow-y-auto">
         <CardHeader className="justify-start flex">
           <CardTitle className="text-base flex justify-start items-center">
             <span>Your chats</span>
@@ -111,7 +111,8 @@ export function ChatList() {
                     <ModelBadge
                       model={chat.model}
                       className={cn(
-                        chat.id !== currentChatId && "bg-gray-50 text-gray-700"
+                        chat.id !== currentChatId && "bg-gray-50 text-gray-700",
+                        "whitespace-nowrap truncate"
                       )}
                     />
                   </div>
@@ -256,7 +257,7 @@ export function ChatList() {
               className="w-full"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !e.shiftKey) {
                   saveDescription();
                 } else if (e.key === "Escape") {
                   closeDescriptionModal();
