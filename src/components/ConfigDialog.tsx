@@ -25,10 +25,22 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { SettingsIcon, AlertCircle } from "lucide-react";
+import {
+  SettingsIcon,
+  AlertCircle,
+  FileJson,
+  Loader2,
+  CurlyBraces,
+} from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ChatType } from "@/types/chat";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { toast } from "sonner";
 
 import { useChatContext } from "./ChatContext";
 import { MODELS } from "@/constants/models";
@@ -86,6 +98,9 @@ const OutputFormatTab = ({
   const { modelConfig } = currentChat;
 
   const [jsonSchemaError, setJsonSchemaError] = useState<string | null>(null);
+  const [loadingTypescript, setLoadingTypescript] = useState(false);
+  const [typescript, setTypescript] = useState("");
+  const [typescriptOpen, setTypescriptOpen] = useState(false);
 
   const handleOutputFormatChange = (
     value: Required<ChatType["modelConfig"]>["outputFormat"]["type"]
@@ -98,10 +113,7 @@ const OutputFormatTab = ({
     });
   };
 
-  const handleJsonSchemaChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
-    const schemaText = e.target.value;
+  const handleJsonSchemaChange = (schemaText: string) => {
     updateModelConfig({
       outputFormat: {
         ...currentChat.modelConfig.outputFormat,
@@ -133,34 +145,104 @@ const OutputFormatTab = ({
       </div>
 
       <div className="space-y-2">
-        <Select
-          value={modelConfig.outputFormat?.type || "text"}
-          onValueChange={handleOutputFormatChange}
-          disabled={!supportsJsonFormat}
-        >
-          <SelectTrigger id="response-format">
-            <div>
-              {
-                OUTPUT_FORMATS.find(
-                  (f) => f.type === modelConfig.outputFormat?.type
-                )?.label
-              }
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {OUTPUT_FORMATS.map((format) => {
-              return (
-                <SelectItemWithDescription
-                  key={format.type}
-                  value={format.type}
-                  description={format.description}
-                >
-                  {format.label}
-                </SelectItemWithDescription>
-              );
-            })}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center space-x-2">
+          <Select
+            value={modelConfig.outputFormat?.type || "text"}
+            onValueChange={handleOutputFormatChange}
+            disabled={!supportsJsonFormat}
+          >
+            <SelectTrigger id="response-format">
+              <div>
+                {
+                  OUTPUT_FORMATS.find(
+                    (f) => f.type === modelConfig.outputFormat?.type
+                  )?.label
+                }
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {OUTPUT_FORMATS.map((format) => {
+                return (
+                  <SelectItemWithDescription
+                    key={format.type}
+                    value={format.type}
+                    description={format.description}
+                  >
+                    {format.label}
+                  </SelectItemWithDescription>
+                );
+              })}
+            </SelectContent>
+          </Select>
+          {modelConfig.outputFormat?.type === "json_schema" && (
+            <>
+              <Popover
+                open={typescriptOpen}
+                onOpenChange={setTypescriptOpen}
+                // so that the scroll doesn't get intercepted incorrectly for
+                // the content
+                modal
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    onClick={async () => {
+                      try {
+                        setLoadingTypescript(true);
+                        const response = await fetch(`/api/json`, {
+                          method: "POST",
+                          body: JSON.stringify({
+                            schema: modelConfig.outputFormat?.schema,
+                          }),
+                          credentials: "include",
+                        });
+                        const json = await response.json();
+                        const { typescript } = json;
+                        setTypescript(typescript);
+                        setTypescriptOpen(true);
+                      } catch (err) {
+                        setJsonSchemaError(`${err}`);
+                      }
+                      setLoadingTypescript(false);
+                    }}
+                  >
+                    {loadingTypescript ? (
+                      <Loader2 className="w-4 h-4 mr-2" />
+                    ) : (
+                      <FileJson className="w-4 h-4 mr-2" />
+                    )}
+                    Check typescript
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="max-w-2xl w-full p-0">
+                  <ScrollArea className="h-64 sm:h-86 overflow-y-auto">
+                    <div className="whitespace-pre text-gray-600 p-2 text-sm">
+                      {typescript}
+                    </div>
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
+
+              <Button
+                variant={"outline"}
+                onClick={() => {
+                  try {
+                    const json = JSON.parse(
+                      modelConfig.outputFormat?.schema || "{}"
+                    );
+                    handleJsonSchemaChange(JSON.stringify(json, null, 4));
+                  } catch (err) {
+                    toast("Invalid JSON format");
+                  }
+                }}
+              >
+                <CurlyBraces className="w-4 h-4 mr-2" />
+                Auto-format
+              </Button>
+            </>
+          )}
+        </div>
         {!supportsJsonFormat && (
           <p className="text-xs text-gray-500">
             JSON response format is only available for OpenAI models
@@ -177,7 +259,7 @@ const OutputFormatTab = ({
               "...",
             ].join("\n")}
             value={modelConfig.outputFormat.schema || ""}
-            onChange={handleJsonSchemaChange}
+            onChange={(e) => handleJsonSchemaChange(e.target.value)}
             className="min-h-[150px] font-mono text-sm"
             disabled={!supportsJsonFormat}
           />
